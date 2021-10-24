@@ -187,35 +187,38 @@ main(int argc, char** argv)
     XSetWindowAttributes attr;
     attr.override_redirect = 1;
 
-    { // override-redirect
-        if (find_desktop_window(dpy, screen, &root, &p_desktop)) {
-            win = XCreateWindow(dpy, p_desktop, x, y, xsh.width, xsh.height, 0,
-                CopyFromParent, InputOutput, CopyFromParent, CWOverrideRedirect, &attr);
-        } else {
-            win = XCreateWindow(dpy, root, x, y, xsh.width, xsh.height, 0, CopyFromParent,
-                InputOutput, CopyFromParent, CWOverrideRedirect, &attr);
+    if (win == root) {
+        { // override-redirect
+            if (find_desktop_window(dpy, screen, &root, &p_desktop)) {
+                win = XCreateWindow(dpy, p_desktop, x, y, xsh.width, xsh.height, 0,
+                    CopyFromParent, InputOutput, CopyFromParent, CWOverrideRedirect, &attr);
+            } else {
+                win = XCreateWindow(dpy, root, x, y, xsh.width, xsh.height, 0, CopyFromParent,
+                    InputOutput, CopyFromParent, CWOverrideRedirect, &attr);
+            }
         }
-    }
 
-    XSetWMProperties(dpy, win, NULL, NULL, argv, argc, &xsh, &xwmh, NULL);
+        XSetWMProperties(dpy, win, NULL, NULL, argv, argc, &xsh, &xwmh, NULL);
 
-    { // noinput
-        Region region;
-        region = XCreateRegion();
-        if (region) {
-            XShapeCombineRegion(dpy, win, ShapeInput, 0, 0, region, ShapeSet);
-            XDestroyRegion(region);
+        { // noinput
+            Region region;
+            region = XCreateRegion();
+            if (region) {
+                XShapeCombineRegion(dpy, win, ShapeInput, 0, 0, region, ShapeSet);
+                XDestroyRegion(region);
+            }
         }
+
+        { // below state
+            Atom window_type = XInternAtom(dpy, "_NET_WM_STATE", False);
+            Atom desktop = XInternAtom(dpy, "_NET_WM_STATE_BELOW", False);
+            XChangeProperty(dpy, win, window_type, XA_ATOM, 32, PropModeReplace,
+                (unsigned char*)&desktop, 1);
+        }
+
+        XMapWindow(dpy, win);
     }
 
-    { // below state
-        Atom window_type = XInternAtom(dpy, "_NET_WM_STATE", False);
-        Atom desktop = XInternAtom(dpy, "_NET_WM_STATE_BELOW", False);
-        XChangeProperty(dpy, win, window_type, XA_ATOM, 32, PropModeReplace,
-            (unsigned char*)&desktop, 1);
-    }
-
-    XMapWindow(dpy, win);
     XSync(dpy, win);
     sprintf(widArg, "0x%x", (int)win);
 
